@@ -156,6 +156,92 @@ $memory = $result->fetch_assoc();
   <a href="memories.php" class="text-pink-600 hover:underline">← Back to Memories</a>
 </div>
 
+<?php
+// --- Related Memories ---
+$tags = array_filter(array_map('trim', explode(',', $memory['tags'] ?? '')));
+
+if (!empty($tags)) {
+    // Build a WHERE clause for tags
+    $likeClauses = [];
+    $params = [];
+    $types = "";
+
+    foreach ($tags as $tag) {
+        $likeClauses[] = "m.tags LIKE ?";
+        $params[] = "%" . $tag . "%";
+        $types .= "s";
+    }
+
+    $sql = "
+        SELECT m.id, m.title, m.image_path, u.display_name, 
+               (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
+        FROM memories m
+        JOIN users u ON m.user_id = u.id
+        WHERE m.privacy = 'public' 
+          AND m.id != ? 
+          AND (" . implode(" OR ", $likeClauses) . ")
+        ORDER BY RAND()
+        LIMIT 3
+    ";
+
+    $relatedStmt = $conn->prepare($sql);
+    $types = "i" . $types;
+    $params = array_merge([$memory_id], $params);
+    $relatedStmt->bind_param($types, ...$params);
+} else {
+    // Fallback: just random public memories
+    $relatedStmt = $conn->prepare("
+        SELECT m.id, m.title, m.image_path, u.display_name,
+               (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
+        FROM memories m
+        JOIN users u ON m.user_id = u.id
+        WHERE m.privacy = 'public' AND m.id != ?
+        ORDER BY RAND()
+        LIMIT 3
+    ");
+    $relatedStmt->bind_param("i", $memory_id);
+}
+
+$relatedStmt->execute();
+$related = $relatedStmt->get_result();
+?>
+
+<div class="max-w-5xl mx-auto mt-12">
+  <h2 class="text-2xl font-cursive text-pink-600 mb-6 text-center">🌸 Related Memories 🌸</h2>
+
+  <?php if ($related->num_rows > 0): ?>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <?php while ($rel = $related->fetch_assoc()): ?>
+        <a href="memory.php?id=<?php echo $rel['id']; ?>" 
+           class="block bg-white shadow-lg rounded-xl overflow-hidden transform hover:scale-105 transition duration-300"
+           data-aos="fade-up">
+          
+          <?php if ($rel['image_path']): ?>
+            <img src="<?php echo $rel['image_path']; ?>" 
+                 alt="Memory Image" 
+                 class="w-full h-48 object-cover">
+          <?php else: ?>
+            <div class="w-full h-48 bg-pink-50 flex items-center justify-center text-pink-300 text-5xl">🌷</div>
+          <?php endif; ?>
+
+          <div class="p-4 text-center">
+            <p class="font-cursive text-lg text-gray-700">
+              <?php echo htmlspecialchars($rel['title']); ?>
+            </p>
+            <p class="text-xs text-gray-500 italic mb-1">
+              by <?php echo htmlspecialchars($rel['display_name']); ?>
+            </p>
+            <p class="text-sm text-pink-600">❤️ <?php echo $rel['like_count']; ?></p>
+          </div>
+        </a>
+      <?php endwhile; ?>
+    </div>
+  <?php else: ?>
+    <p class="text-center text-gray-500">No related memories found 💭</p>
+  <?php endif; ?>
+</div>
+
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const photo = document.getElementById("memory-photo");
