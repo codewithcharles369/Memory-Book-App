@@ -8,18 +8,17 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check memory ID
-if (!isset($_GET['id'])) {
-    header("Location: memories.php");
-    exit;
+$memory_id = intval($_GET['id'] ?? 0);
+$user_id   = $_SESSION['user_id'];
+
+// Fetch memory (owner OR admin)
+if (isAdmin()) {
+    $stmt = $conn->prepare("SELECT * FROM memories WHERE id = ?");
+    $stmt->bind_param("i", $memory_id);
+} else {
+    $stmt = $conn->prepare("SELECT * FROM memories WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $memory_id, $user_id);
 }
-
-$memory_id = intval($_GET['id']);
-$user_id = $_SESSION['user_id'];
-
-// Fetch memory (only if owned by user)
-$stmt = $conn->prepare("SELECT * FROM memories WHERE id = ? AND user_id = ?");
-$stmt->bind_param("ii", $memory_id, $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -47,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Replace with new image
         $new_image_path = $uploadDir . time() . "_img_" . basename($_FILES['image']['name']);
         if (move_uploaded_file($_FILES['image']['tmp_name'], $new_image_path)) {
-            // delete old image if exists
             if ($image_path && file_exists($image_path)) {
                 unlink($image_path);
             }
@@ -55,20 +53,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Update DB
-    $stmt = $conn->prepare("UPDATE memories 
-        SET title = ?, description = ?, image_path = ?, tags = ?, privacy = ?
-        WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ssssssi", $title, $description, $image_path, $tags, $privacy, $memory_id, $user_id);
+    if (isAdmin() && $memory['user_id'] != $user_id) {
+    $lastEditedBy = "Destiny";
+    } else {
+        $lastEditedBy = null;
+    }
+
+
+    // Update DB (admin can skip user_id check)
+    if (isAdmin()) {
+        $stmt = $conn->prepare("UPDATE memories 
+            SET title = ?, description = ?, image_path = ?, tags = ?, privacy = ?, last_edited_by = ?
+            WHERE id = ?");
+        $stmt->bind_param("ssssssi", $title, $description, $image_path, $tags, $privacy, $lastEditedBy, $memory_id);
+    } else {
+        $stmt = $conn->prepare("UPDATE memories 
+            SET title = ?, description = ?, image_path = ?, tags = ?, privacy = ?, last_edited_by = ?
+            WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ssssssii", $title, $description, $image_path, $tags, $privacy, $lastEditedBy, $memory_id, $user_id);
+    }
+
 
     if ($stmt->execute()) {
-       header("Location: memories.php?msg=updated");
+        header("Location: memories.php?msg=updated");
         exit;
     } else {
         $err = "Something went wrong while updating 💔.";
     }
 }
 ?>
+
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Edit Memory ✏️</h1>

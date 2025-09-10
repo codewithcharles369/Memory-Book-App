@@ -38,64 +38,105 @@ $memory = $result->fetch_assoc();
 ?>
 
 
-<div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 relative overflow-hidden">
+<div class="max-w-3xl mx-auto bg-gradient-to-br from-pink-50 to-white rounded-2xl shadow-lg p-6 relative overflow-hidden">
+
 
   <!-- Decorative floating flowers -->
   <div class="absolute -top-3 -left-3 text-pink-200 text-5xl rotate-12">🌸</div>
   <div class="absolute bottom-2 right-2 text-pink-100 text-4xl animate-pulse">🌷</div>
 
-    <!-- Image with double-tap like -->
-    <div class="relative mb-6 group" id="memory-photo" data-id="<?php echo $memory['id']; ?>">
-        <?php if ($memory['image_path']): ?>
-            <img src="<?php echo $memory['image_path']; ?>" alt="Memory Image" 
-                class="w-full h-96 object-cover rounded-lg shadow-md cursor-pointer select-none">
-                <!-- tape sticker effect -->
-      <div class="absolute -top-3 left-1/3 bg-pink-200 w-24 h-6 rotate-6 rounded-sm opacity-70"></div>
-        <?php else: ?>
-            <div class="w-full h-96 bg-pink-50 flex items-center justify-center text-pink-300 text-7xl rounded-lg">🌷</div>
-        <?php endif; ?>
+  <!-- Image with double-tap like -->
+  <div class="relative mb-6 group" id="memory-photo" data-id="<?php echo $memory['id']; ?>">
+      <?php if ($memory['image_path']): ?>
+          <img src="<?php echo $memory['image_path']; ?>" alt="Memory Image" 
+              class="w-full h-96 object-cover rounded-lg shadow-md cursor-pointer select-none">
 
-        <!-- Big fading heart -->
-        <div id="big-heart" 
-            class="absolute inset-0 flex items-center justify-center text-8xl opacity-0 pointer-events-none transition transform scale-50">
-        </div>
+          <!-- tape sticker effect -->
+          <div class="absolute -top-3 left-1/3 bg-pink-200 w-24 h-6 rotate-6 rounded-sm opacity-70"></div>
 
-        <!-- Burst hearts -->
-        <div id="burst-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+          <!-- Top-right action buttons -->
+          <div class="absolute top-3 right-3 flex space-x-2">
+              <!-- Download button -->
+              <a href="<?php echo $memory['image_path']; ?>" 
+                download="memory_<?php echo $memory['id']; ?>.jpg"
+                class="bg-white/80 hover:bg-white text-pink-600 px-3 py-2 rounded-full shadow-md transition flex items-center space-x-1"
+                title="Download Image">
+                <i class="fa-solid fa-download"></i> <span class="hidden sm:inline text-sm">Download</span>
+              </a>
+
+              <button id="share-btn"
+                      class="bg-white/80 hover:bg-white text-pink-600 px-3 py-2 rounded-full shadow-md transition flex items-center space-x-1"
+                      title="Share Memory"
+                      data-url="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . '/memory.php?id=' . $memory['id']; ?>"
+                      data-title="<?php echo htmlspecialchars($memory['title']); ?>">
+                <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline text-sm">Share</span>
+              </button>
+
+          </div>
+      <?php else: ?>
+          <div class="w-full h-96 bg-pink-50 flex items-center justify-center text-pink-300 text-7xl rounded-lg">🌷</div>
+      <?php endif; ?>
+
+      <!-- Big fading heart -->
+      <div id="big-heart" 
+          class="absolute inset-0 flex items-center justify-center text-8xl opacity-0 pointer-events-none transition transform scale-50">
+      </div>
+
+      <!-- Burst hearts -->
+      <div id="burst-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+  </div>
 
 
-    </div>
 
   <!-- Title -->
-  <h1 class="text-4xl font-cursive text-pink-600 mb-4" data-aos="fade-up">
-    <?php echo htmlspecialchars($memory['title']); ?>
-  </h1>
+<h1 class="text-4xl font-cursive text-pink-600 mb-2 border-b-2 border-pink-200 inline-block" data-aos="fade-up">
+  <?php echo htmlspecialchars($memory['title']); ?>
+</h1>
+
 
   <!-- Description -->
   <p class="text-lg text-gray-700 mb-4 whitespace-pre-line leading-relaxed" data-aos="fade-up" data-aos-delay="100">
     <?php echo nl2br(htmlspecialchars($memory['description'])); ?>
   </p>
 
+
+
+
   <!-- Tags -->
   <?php if ($memory['tags']): ?>
     <div class="mb-4" data-aos="fade-up" data-aos-delay="200">
       <?php foreach (explode(',', $memory['tags']) as $tag): ?>
-        <a href="memories.php?q=<?php echo urlencode(trim($tag)); ?>"
-           class="inline-block bg-pink-100 text-pink-700 text-sm px-3 py-1 rounded-full mr-2 hover:bg-pink-200 transition">
-           #<?php echo htmlspecialchars(trim($tag)); ?>
-        </a>
+      <a href="memories.php?q=<?php echo urlencode(trim($tag)); ?>"
+        class="inline-flex items-center gap-1 bg-pink-100 text-pink-700 text-sm px-3 py-1 rounded-full mr-2 hover:bg-pink-200 hover:shadow transition">
+        <i class="fa-solid fa-hashtag"></i> <?php echo htmlspecialchars(trim($tag)); ?>
+      </a>
+
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
 
   <!-- Footer Info -->
-  <div class="text-sm text-gray-500 mt-4" data-aos="fade-up" data-aos-delay="300">
-    Posted by <span class="font-semibold"><?php echo htmlspecialchars($memory['display_name']); ?></span><br>
-    <span><?php echo date("F j, Y, g:i a", strtotime($memory['created_at'])); ?></span>
-    <?php if ($memory['privacy'] === "private"): ?>
-      <span class="ml-2 text-pink-600">🔒 Private</span>
-    <?php endif; ?>
-  </div>
+<div class="text-sm text-gray-500 mt-4" data-aos="fade-up" data-aos-delay="300">
+  <i class="fa-solid fa-user"></i> 
+  <span class="font-semibold"><?php echo htmlspecialchars($memory['display_name']); ?></span><br>
+  
+  <?php if (!empty($memory['last_edited_by'])): ?>
+    <div class="text-xs text-gray-400 mt-1">
+      <i class="fa-solid fa-pen"></i> Edited by <?php echo htmlspecialchars($memory['last_edited_by']); ?>
+    </div>
+  <?php endif; ?>
+  
+  <i class="fa-regular fa-clock"></i> 
+  <span><?php echo date("F j, Y, g:i a", strtotime($memory['created_at'])); ?></span>
+  
+  <?php if ($memory['privacy'] === "private"): ?>
+    <span class="ml-2 text-pink-600">
+      <i class="fa-solid fa-lock"></i> Private
+    </span>
+  <?php endif; ?>
+</div>
+  <!-- Sound effect for like -->
+  <audio id="like-sound" src="assets/sounds/pop.mp3" preload="auto"></audio>  
 
 <!-- Like Button + Counter -->
 <div class="mt-6 flex items-center space-x-3">
@@ -140,14 +181,17 @@ $memory = $result->fetch_assoc();
 <?php if ($memory['user_id'] == $_SESSION['user_id'] || isAdmin()): ?>
   <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
     <a href="edit_memory.php?id=<?php echo $memory['id']; ?>" 
-       class="bg-pink-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-pink-600 transition text-xl">
-       ✏️
+      class="bg-pink-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-pink-600 transition text-xl"
+      title="Edit Memory">
+      <i class="fa-solid fa-pen-to-square"></i>
     </a>
     <a href="delete_memory.php?id=<?php echo $memory['id']; ?>" 
-       onclick="return confirm('Are you sure you want to delete this memory? This cannot be undone. 💔');"
-       class="bg-red-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-red-600 transition text-xl">
-       🗑️
+      onclick="return confirm('Are you sure you want to delete this memory? This cannot be undone. 💔');"
+      class="bg-red-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-red-600 transition text-xl"
+      title="Delete Memory">
+      <i class="fa-solid fa-trash"></i>
     </a>
+
   </div>
 <?php endif; ?>
 
@@ -207,7 +251,7 @@ $related = $relatedStmt->get_result();
 ?>
 
 <div class="max-w-5xl mx-auto mt-12">
-  <h2 class="text-2xl font-cursive text-pink-600 mb-6 text-center">🌸 Related Memories 🌸</h2>
+  <h2 class="text-2xl font-cursive text-pink-600 mb-6 text-center"> <i class="fa-solid fa-spa"></i> Related Memories  <i class="fa-solid fa-spa"></i></h2>
 
   <?php if ($related->num_rows > 0): ?>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
@@ -231,7 +275,7 @@ $related = $relatedStmt->get_result();
             <p class="text-xs text-gray-500 italic mb-1">
               by <?php echo htmlspecialchars($rel['display_name']); ?>
             </p>
-            <p class="text-sm text-pink-600">❤️ <?php echo $rel['like_count']; ?></p>
+            <p class="text-sm text-pink-600"><i class="fa-solid fa-heart text-pink-500"></i> <?php echo $rel['like_count']; ?></p>
           </div>
         </a>
       <?php endwhile; ?>
@@ -241,8 +285,50 @@ $related = $relatedStmt->get_result();
   <?php endif; ?>
 </div>
 
+<!-- Toast notification -->
+<div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-pink-600 text-white px-4 py-2 rounded-xl shadow-lg opacity-0 transition-opacity duration-500 z-50">
+  📋 Link copied!
+</div>
+
 
 <script>
+// Share button handler with cute toast fallback
+document.addEventListener("DOMContentLoaded", () => {
+  const shareBtn = document.getElementById("share-btn");
+  const toast = document.getElementById("toast");
+
+  if (shareBtn) {
+    shareBtn.addEventListener("click", async () => {
+      const url = shareBtn.dataset.url;
+      const title = shareBtn.dataset.title;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "🌸 Cleopatra’s Memory Garden",
+            text: title,
+            url: url,
+          });
+        } catch (err) {
+          console.log("Share cancelled:", err);
+        }
+      } else {
+        // fallback: copy to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+          // Show toast
+          toast.classList.remove("opacity-0");
+          toast.classList.add("opacity-100");
+
+          setTimeout(() => {
+            toast.classList.remove("opacity-100");
+            toast.classList.add("opacity-0");
+          }, 2000); // hide after 2s
+        });
+      }
+    });
+  }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   const photo = document.getElementById("memory-photo");
   const bigHeart = document.getElementById("big-heart");
@@ -365,6 +451,8 @@ function createBurst() {
 
 
 });
+
+
 </script>
 
 <audio id="like-sound" src="assets/sounds/pop.mp3" preload="auto"></audio>
