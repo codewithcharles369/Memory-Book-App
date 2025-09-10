@@ -1,2 +1,2 @@
 # Memory-Book-App
-Getting name of liked users
+Getting names of liked users
