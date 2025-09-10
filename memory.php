@@ -136,21 +136,21 @@ $memory = $result->fetch_assoc();
 
 
 
-  <!-- Edit/Delete Buttons (only for owner) -->
-  <?php if ($memory['user_id'] == $_SESSION['user_id']): ?>
-    <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
-      <a href="edit_memory.php?id=<?php echo $memory['id']; ?>" 
-         class="bg-pink-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-pink-600 transition text-xl">
-         ✏️
-      </a>
-      <a href="delete_memory.php?id=<?php echo $memory['id']; ?>" 
-         onclick="return confirm('Are you sure you want to delete this memory? This cannot be undone. 💔');"
-         class="bg-red-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-red-600 transition text-xl">
-         🗑️
-      </a>
-    </div>
-  <?php endif; ?>
-</div>
+<!-- Edit/Delete Buttons (Owner or Admin) -->
+<?php if ($memory['user_id'] == $_SESSION['user_id'] || isAdmin()): ?>
+  <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
+    <a href="edit_memory.php?id=<?php echo $memory['id']; ?>" 
+       class="bg-pink-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-pink-600 transition text-xl">
+       ✏️
+    </a>
+    <a href="delete_memory.php?id=<?php echo $memory['id']; ?>" 
+       onclick="return confirm('Are you sure you want to delete this memory? This cannot be undone. 💔');"
+       class="bg-red-500 text-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-red-600 transition text-xl">
+       🗑️
+    </a>
+  </div>
+<?php endif; ?>
+
 
 <div class="max-w-3xl mx-auto mt-6 text-center">
   <a href="memories.php" class="text-pink-600 hover:underline">← Back to Memories</a>
