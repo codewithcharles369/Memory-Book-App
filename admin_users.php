@@ -1,10 +1,10 @@
 <?php
-include '../config/db.php';
-include '../includes/header.php';
+include 'config/db.php';
+include 'includes/header.php';
 
 // Ensure only admins can access
 if (!isAdmin()) {
-    header("Location: ../memories.php");
+    header("Location: memories.php");
     exit;
 }
 
@@ -119,11 +119,6 @@ if ($search) {
                   <a href="delete_user.php?id=<?php echo $user['id']; ?>" 
                      onclick="return confirm('Are you sure you want to delete this user?')" 
                      class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm">Delete</a>
-                  
-                  <!-- Reset Password -->
-                  <a href="reset_user.php?id=<?php echo $user['id']; ?>" 
-                     onclick="return confirm('Reset this user\'s password to default?')" 
-                     class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm">Reset</a>
                 <?php else: ?>
                   <span class="text-gray-400 text-sm italic">Protected</span>
                 <?php endif; ?>
@@ -138,4 +133,4 @@ if ($search) {
   <?php endif; ?>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include 'includes/footer.php'; ?>

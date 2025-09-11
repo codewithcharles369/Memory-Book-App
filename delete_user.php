@@ -1,9 +1,9 @@
 <?php
-include '../config/db.php';
+include 'config/db.php';
 
 // Ensure only admins can access
 if (!isAdmin()) {
-    header("Location: ../memories.php");
+    header("Location: memories.php");
     exit;
 }
 
@@ -16,9 +16,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $stmt->bind_param("i", $id);
 
     if ($stmt->execute() && $stmt->affected_rows > 0) {
-        header("Location: users.php?msg=deleted");
+        header("Location: admin_users.php?msg=deleted");
     } else {
-        header("Location: users.php?err=cannotdelete");
+        header("Location: admin_users.php?err=cannotdelete");
     }
     exit;
 } else {

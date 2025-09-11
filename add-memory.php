@@ -8,32 +8,43 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+$user_id = $_SESSION['user_id'];
+
+// Get current user role
+$role = 'user';
+$roleStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+$roleStmt->bind_param("i", $user_id);
+$roleStmt->execute();
+$roleResult = $roleStmt->get_result();
+if ($roleResult && $roleResult->num_rows > 0) {
+    $roleRow = $roleResult->fetch_assoc();
+    $role = $roleRow['role'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title       = trim($_POST['title']);
     $description = trim($_POST['description']);
     $tags        = trim($_POST['tags']);
     $privacy     = $_POST['privacy'];
-    $user_id     = $_SESSION['user_id'];
 
-    // File upload handling
     $uploadDir = "uploads/";
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
 
     $image_path = null;
-
-    // Image upload
     if (!empty($_FILES['image']['name'])) {
         $image_path = $uploadDir . time() . "_img_" . basename($_FILES['image']['name']);
         move_uploaded_file($_FILES['image']['tmp_name'], $image_path);
     }
 
-    // Insert into database
+    // ✅ Admins create APPROVED memories instantly
+    $status = ($role === 'admin') ? 'approved' : 'pending';
+
     $stmt = $conn->prepare("INSERT INTO memories 
-        (user_id, title, description, image_path, tags, privacy) 
-        VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("isssss", $user_id, $title, $description, $image_path, $tags, $privacy);
+        (user_id, title, description, image_path, tags, privacy, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssss", $user_id, $title, $description, $image_path, $tags, $privacy, $status);
 
     if ($stmt->execute()) {
         header("Location: memories.php?msg=added");
@@ -43,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>

@@ -1,10 +1,10 @@
 <?php
-include '../includes/header.php';
-include '../config/db.php';
+include 'includes/header.php';
+include 'config/db.php';
 
 // Ensure only admins can access
 if (!isAdmin()) {
-    header("Location: ../memories.php");
+    header("Location: memories.php");
     exit;
 }
 ?>
@@ -14,17 +14,17 @@ if (!isAdmin()) {
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <!-- Manage Users -->
-    <a href="users.php" class="block bg-white rounded-xl shadow hover:shadow-lg p-6 text-center">
+    <a href="admin_users.php" class="block bg-white rounded-xl shadow hover:shadow-lg p-6 text-center">
       <h2 class="text-xl font-semibold text-pink-600">👥 Manage Users</h2>
-      <p class="text-gray-600">View, reset, or remove users</p>
+      <p class="text-gray-600">View or remove users</p>
     </a>
 
     <!-- Manage Memories -->
-    <a href="memories.php" class="block bg-white rounded-xl shadow hover:shadow-lg p-6 text-center">
+    <a href="admin_memories.php" class="block bg-white rounded-xl shadow hover:shadow-lg p-6 text-center">
       <h2 class="text-xl font-semibold text-pink-600">📸 Manage Memories</h2>
-      <p class="text-gray-600">Review, edit, or delete memories</p>
+      <p class="text-gray-600">Review or delete memories</p>
     </a>
   </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include 'includes/footer.php'; ?>

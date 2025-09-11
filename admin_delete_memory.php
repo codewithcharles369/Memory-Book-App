@@ -1,9 +1,9 @@
 <?php
-include '../config/db.php';
+include 'config/db.php';
 
 // Ensure only admins can access
 if (!isAdmin()) {
-    header("Location: ../memories.php");
+    header("Location: memories.php");
     exit;
 }
 
@@ -24,21 +24,21 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
         if ($delete_stmt->execute()) {
             // Remove image file if it exists
-            if (!empty($memory['image_path']) && file_exists("../" . $memory['image_path'])) {
-                unlink("../" . $memory['image_path']);
+            if (!empty($memory['image_path']) && file_exists("" . $memory['image_path'])) {
+                unlink("" . $memory['image_path']);
             }
 
-            header("Location: memories.php?msg=deleted");
+            header("Location: admin_memories.php?msg=deleted");
             exit;
         } else {
-            header("Location: memories.php?err=invalid");
+            header("Location: admin_memories.php?err=invalid");
             exit;
         }
     } else {
-        header("Location: memories.php?err=invalid");
+        header("Location: admin_memories.php?err=invalid");
         exit;
     }
 } else {
-    header("Location: memories.php?err=invalid");
+    header("Location: admin_memories.php?err=invalid");
     exit;
 }

@@ -17,24 +17,44 @@ if (!isset($_GET['id'])) {
 $memory_id = intval($_GET['id']);
 $user_id = $_SESSION['user_id'];
 
-// Fetch memory (allow if public or owned by user)
-$stmt = $conn->prepare("
-    SELECT m.*, u.display_name 
-    FROM memories m
-    JOIN users u ON m.user_id = u.id
-    WHERE m.id = ? AND (m.privacy = 'public' OR m.user_id = ?)
-");
-$stmt->bind_param("ii", $memory_id, $user_id);
+// Get user role
+$roleStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+$roleStmt->bind_param("i", $user_id);
+$roleStmt->execute();
+$userRole = $roleStmt->get_result()->fetch_assoc()['role'] ?? 'user';
+$isAdmin = ($userRole === 'admin');
+
+// Fetch memory (allow if public, owned by user, or admin)
+if ($isAdmin) {
+    $stmt = $conn->prepare("
+        SELECT m.*, u.display_name 
+        FROM memories m
+        JOIN users u ON m.user_id = u.id
+        WHERE m.id = ?
+    ");
+    $stmt->bind_param("i", $memory_id);
+} else {
+    $stmt = $conn->prepare("
+        SELECT m.*, u.display_name 
+        FROM memories m
+        JOIN users u ON m.user_id = u.id
+        WHERE m.id = ? AND (m.privacy = 'public' OR m.user_id = ?)
+    ");
+    $stmt->bind_param("ii", $memory_id, $user_id);
+}
+
+// ✅ Execute query and get result (this was missing for admin)
 $stmt->execute();
 $result = $stmt->get_result();
 
-if ($result->num_rows === 0) {
+if (!$result || $result->num_rows === 0) {
     echo "<p class='text-center text-gray-600'>This memory is private or does not exist 💔.</p>";
     include 'includes/footer.php';
     exit;
 }
 
 $memory = $result->fetch_assoc();
+
 ?>
 
 
@@ -49,7 +69,7 @@ $memory = $result->fetch_assoc();
   <div class="relative mb-6 group" id="memory-photo" data-id="<?php echo $memory['id']; ?>">
       <?php if ($memory['image_path']): ?>
           <img src="<?php echo $memory['image_path']; ?>" alt="Memory Image" 
-              class="w-full h-96 object-cover rounded-lg shadow-md cursor-pointer select-none">
+              class="w-full h-full object-cover rounded-lg shadow-md cursor-pointer select-none">
 
           <!-- tape sticker effect -->
           <div class="absolute -top-3 left-1/3 bg-pink-200 w-24 h-6 rotate-6 rounded-sm opacity-70"></div>
@@ -86,12 +106,65 @@ $memory = $result->fetch_assoc();
       <div id="burst-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
   </div>
 
+<?php if ($memory['status'] === 'pending'): ?>
+  <div class="mt-4">
+    <span class="inline-block bg-yellow-500 text-white text-xs px-3 py-1 rounded-md shadow">
+      ⏳ Pending
+    </span>
+
+    <?php if ($isAdmin): ?>
+      <div class="mt-3 flex gap-3">
+        <button 
+          onclick="updateStatus(<?php echo $memory['id']; ?>, 'approve')"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700">
+          ✅ Approve
+        </button>
+        <button 
+          onclick="updateStatus(<?php echo $memory['id']; ?>, 'reject')"
+          class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
+          ❌ Reject
+        </button><br>
+      </div>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
+<?php if ($memory['status'] === 'rejected'): ?>
+  <div class="mt-4">
+    <span class="inline-block bg-red-600 text-white text-xs px-3 py-1 rounded-md shadow">
+      🚫 Rejected
+    </span>
+
+    <?php if ($isAdmin): ?>
+      <div class="mt-3 flex gap-3">
+        <button 
+          onclick="updateStatus(<?php echo $memory['id']; ?>, 'approve')"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700">
+          ✅ Approve
+        </button>
+        <a href="delete_memory.php?id=<?php echo $memory['id']; ?>" 
+          onclick="return confirm('Are you sure you want to delete this memory? This cannot be undone. 💔');"
+          class="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 transition text-xl"
+          title="Delete Memory">
+          <i class="fa-solid fa-trash"></i> Delete
+        </a>
+      </div>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
 
 
   <!-- Title -->
 <h1 class="text-4xl font-cursive text-pink-600 mb-2 border-b-2 border-pink-200 inline-block" data-aos="fade-up">
   <?php echo htmlspecialchars($memory['title']); ?>
+<?php if ($isAdmin && $memory['privacy'] === 'private' && $memory['user_id'] != $user_id): ?>
+    <span class="inline-flex items-center gap-1 text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+      🔒 Private
+    </span>
+  <?php endif; ?>
 </h1>
+
 
 
   <!-- Description -->
@@ -239,7 +312,7 @@ if (!empty($tags)) {
                (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
         FROM memories m
         JOIN users u ON m.user_id = u.id
-        WHERE m.privacy = 'public' AND m.id != ?
+        WHERE m.privacy = 'public' AND m.id != ? AND  m.status = 'approved'
         ORDER BY RAND()
         LIMIT 3
     ");
@@ -305,7 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: "🌸 Cleopatra’s Memory Garden",
+            title: "🌸 Destiny’s Memory Garden",
             text: title,
             url: url,
           });
@@ -335,38 +408,48 @@ document.addEventListener("DOMContentLoaded", () => {
   const likeBtn = document.getElementById("like-btn");
   const likeIcon = document.getElementById("like-icon");
   const likeCount = document.getElementById("like-count");
+  let lastTap = 0;
+
+const memoryId = <?php echo json_encode($memory['id']); ?>;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const likeCount = document.getElementById("like-count");
   const likesModal = document.getElementById("likes-modal");
   const closeModal = document.getElementById("close-modal");
   const likesList = document.getElementById("likes-list");
-  let lastTap = 0;
 
-    // Open modal when clicking count
   likeCount.addEventListener("click", () => {
-    likesModal.classList.remove("hidden", "opacity-0");
+    likesModal.classList.remove("hidden");
     likesList.innerHTML = `<li class="text-gray-500 text-sm italic">Loading...</li>`;
 
-fetch("api/get_likes.php", {
-  method: "POST",
-  headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  body: "memory_id=" + encodeURIComponent(memoryId)
-})
-.then(res => res.json())
-.then(data => {
-  if (data.success) {
-    // data.friends is an array of {name: "..."}
-    likesList.innerHTML = data.friends.length
-      ? data.friends.map(f => `<li class="p-2 bg-pink-50 rounded-lg">💖 ${escapeHtml(f.name)}</li>`).join('')
-      : `<li class="text-gray-500 text-sm italic">No likes yet</li>`;
-  } else {
-    console.error('API error', data);
-    likesList.innerHTML = `<li class="text-red-500 text-sm">Error: ${data.error}</li>`;
-  }
-})
-.catch(err => {
-  console.error(err);
-  likesList.innerHTML = `<li class="text-red-500 text-sm">Network error</li>`;
-});
+    fetch("api/get_likes.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "memory_id=" + encodeURIComponent(memoryId)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        likesList.innerHTML = data.friends.length
+          ? data.friends.map(f => `<li class="p-2 bg-pink-50 rounded-lg">💖 ${f.name}</li>`).join('')
+          : `<li class="text-gray-500 text-sm italic">No likes yet</li>`;
+      } else {
+        likesList.innerHTML = `<li class="text-red-500 text-sm">Error: ${data.error}</li>`;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      likesList.innerHTML = `<li class="text-red-500 text-sm">Network error</li>`;
+    });
   });
+
+  closeModal.addEventListener("click", () => {
+    likesModal.classList.add("hidden");
+  });
+});
+
+
+
 
 
   // Handle double-tap on photo
@@ -457,6 +540,27 @@ function createBurst() {
 
 <audio id="like-sound" src="assets/sounds/pop.mp3" preload="auto"></audio>
 
+<script>
+function updateStatus(memoryId, action) {
+  if (!confirm(`Are you sure you want to ${action} this memory?`)) return;
+
+  fetch('update_status.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `memory_id=${memoryId}&action=${action}`
+  })
+  .then(res => res.text())
+  .then(data => {
+    if (data.trim() === 'success') {
+      alert(`Memory ${action}d successfully`);
+      location.reload();
+    } else {
+      alert('Error: ' + data);
+    }
+  })
+  .catch(err => alert('Request failed'));
+}
+</script>
 
 
 <?php include 'includes/footer.php'; ?>

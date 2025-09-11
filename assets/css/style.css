@@ -21,3 +21,134 @@
   animation: floatUp 1s ease-out forwards;
   pointer-events: none;
 }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+.pulse-bell {
+  animation: pulse 1.5s infinite;
+}
+
+
+/* Keyframes */
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+@keyframes slideUp { from{opacity:0; transform:translateY(30px);} to{opacity:1; transform:translateY(0);} }
+@keyframes float { 0%,100%{transform:translateY(0) rotate(0deg);} 50%{transform:translateY(-15px) rotate(5deg);} }
+@keyframes sparkle { 0%{opacity:0; transform:scale(0);} 50%{opacity:1; transform:scale(1);} 100%{opacity:0; transform:scale(0);} }
+@keyframes pulseGlow { 0%,100%{box-shadow:0 0 10px rgba(236,72,153,0.4);} 50%{box-shadow:0 0 25px rgba(236,72,153,0.7);} }
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Base animation classes */
+.animate-fadeIn { animation: fadeIn 2s ease-out; }
+.animate-slideUp { animation: slideUp 1.5s ease-out; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Flowers floating background */
+.flower { transition: transform 0.4s ease-out; animation: float 8s ease-in-out infinite; }
+
+/* Hero shimmer background */
+.hero-bg {
+  background: linear-gradient(-45deg, #ffe4ec, #ffffff, #fdf2f8, #ffe4ec);
+  background-size: 300% 300%;
+  animation: gradientFlow 15s ease infinite;
+}
+
+/* Destiny's photo pulse */
+.hero-photo {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Sparkle effects */
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(236,72,153,0.7);
+  animation: sparkle 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Hover glow on buttons/cards */
+.glow-hover:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 0 20px rgba(236,72,153,0.3);
+  transition: all 0.3s ease;
+}
+
+/* Fade in stats one by one */
+.stats div:nth-child(1) { animation: fadeIn 1s ease-out 0.2s both; }
+.stats div:nth-child(2) { animation: fadeIn 1s ease-out 0.5s both; }
+.stats div:nth-child(3) { animation: fadeIn 1s ease-out 0.8s both; }
+
+@keyframes fadeUp {
+  0% {opacity: 0; transform: translateY(30px) scale(0.95);}
+  100% {opacity: 1; transform: translateY(0) scale(1);}
+}
+@keyframes sparkle {
+  0% {opacity: 0; transform: scale(0);}
+  50% {opacity: 1; transform: scale(1);}
+  100% {opacity: 0; transform: scale(0);}
+}
+@keyframes float {
+  0%,100% {transform: translateY(0);}
+  50% {transform: translateY(-10px);}
+}
+@keyframes pulseGlow {
+  0%,100% {box-shadow: 0 0 10px rgba(236,72,153,0.3);}
+  50% {box-shadow: 0 0 25px rgba(236,72,153,0.6);}
+}
+
+/* Animate cards on load */
+#memory-grid > a {
+  opacity: 0;
+  animation: fadeUp 1s ease forwards;
+}
+#memory-grid > a:nth-child(1){ animation-delay: .1s; }
+#memory-grid > a:nth-child(2){ animation-delay: .2s; }
+#memory-grid > a:nth-child(3){ animation-delay: .3s; }
+#memory-grid > a:nth-child(4){ animation-delay: .4s; }
+#memory-grid > a:nth-child(5){ animation-delay: .5s; }
+#memory-grid > a:nth-child(6){ animation-delay: .6s; }
+
+/* 3D hover tilt + glow */
+.memory-card-tilt {
+  transition: transform .3s ease, box-shadow .3s ease;
+  will-change: transform;
+}
+.memory-card-tilt:hover {
+  transform: rotateX(5deg) rotateY(-5deg) scale(1.03);
+  box-shadow: 0 10px 25px rgba(236,72,153,0.3);
+}
+
+/* Sparkles */
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(236,72,153,0.7);
+  animation: sparkle 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Floating flowers background */
+.flower {
+  position: fixed;
+  font-size: 2rem;
+  opacity: 0.15;
+  pointer-events: none;
+  animation: float 8s ease-in-out infinite;
+  z-index: -1;
+}
+
+/* Floating add button pulse */
+.add-memory-btn {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
