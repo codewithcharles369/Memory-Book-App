@@ -2,6 +2,7 @@
 include 'includes/header.php';
 include 'config/db.php';
 
+// Redirect if user is not logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -31,18 +32,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $media_path = null;
     $media_type = null;
 
-    if (!empty($_FILES['media']['name'])) {
+    // ✅ Validate upload
+    if (!empty($_FILES['media']['name']) && $_FILES['media']['error'] === UPLOAD_ERR_OK) {
         $fileTmp  = $_FILES['media']['tmp_name'];
         $fileName = basename($_FILES['media']['name']);
         $fileSize = $_FILES['media']['size'];
-        $fileType = function_exists('mime_content_type')
+
+        // Safe detection
+        $fileType = (function_exists('mime_content_type') && is_file($fileTmp))
             ? mime_content_type($fileTmp)
             : ($_FILES['media']['type'] ?? 'unknown');
 
+        // Decide media type
         if (strpos($fileType, 'image/') === 0) {
             $media_type = 'image';
         } elseif (strpos($fileType, 'video/') === 0) {
-            if ($fileSize > 100 * 1024 * 1024) {
+            if ($fileSize > 10 * 1024 * 1024) {
                 $err = "Video file must be less than 10MB.";
             } else {
                 $media_type = 'video';
@@ -51,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $err = "Only images or videos are allowed.";
         }
 
+        // If valid, move the file
         if (empty($err)) {
             $safeName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
             $media_path = $uploadDir . time() . "_" . $safeName;
@@ -63,8 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = "Please upload an image or a video.";
     }
 
+    // Status based on role
     $status = ($role === 'admin') ? 'approved' : 'pending';
 
+    // ✅ Save to DB
     if (empty($err)) {
         $stmt = $conn->prepare("INSERT INTO memories 
             (user_id, title, description, media_path, media_type, tags, privacy, status) 
@@ -85,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>
 
   <?php if (!empty($err)): ?>
-    <p class="bg-red-100 text-red-600 p-2 rounded mb-4"><?php echo $err; ?></p>
+    <p class="bg-red-100 text-red-600 p-2 rounded mb-4"><?php echo htmlspecialchars($err); ?></p>
   <?php endif; ?>
 
   <form method="POST" enctype="multipart/form-data" class="space-y-4">
