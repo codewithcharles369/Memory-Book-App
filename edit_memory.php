@@ -10,7 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 $memory_id = intval($_GET['id'] ?? 0);
 $user_id   = $_SESSION['user_id'];
 
-// Fetch memory based on role
 if (isAdmin()) {
     $stmt = $conn->prepare("SELECT * FROM memories WHERE id = ?");
     $stmt->bind_param("i", $memory_id);
@@ -29,7 +28,6 @@ if ($result->num_rows === 0) {
 
 $memory = $result->fetch_assoc();
 
-// ✅ Handle AJAX update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_edit'])) {
     $title       = trim($_POST['title']);
     $description = trim($_POST['description']);
@@ -78,13 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_edit'])) {
     }
 
     if ($stmt->execute()) {
-        echo json_encode(['status' => 'success']);
+        echo json_encode(['status' => 'success', 'redirect' => "memory.php?id={$memory_id}"]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Something went wrong while updating 💔.']);
     }
     exit;
 }
 ?>
+
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Edit Memory ✏️</h1>
@@ -102,13 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_edit'])) {
 
     <div>
       <label class="block mb-1 font-medium">Current Media</label>
-      <div id="currentMedia">
-        <?php if ($memory['media_type'] === 'video'): ?>
-          <video src="<?php echo htmlspecialchars($memory['media_path']); ?>" controls class="w-40 h-40 object-cover rounded mb-2"></video>
-        <?php elseif ($memory['media_type'] === 'image'): ?>
-          <img src="<?php echo htmlspecialchars($memory['media_path']); ?>" class="w-40 h-40 object-cover rounded mb-2">
-        <?php endif; ?>
-      </div>
+      <?php if ($memory['media_type'] === 'video'): ?>
+        <video src="<?php echo htmlspecialchars($memory['media_path']); ?>" controls class="w-40 h-40 object-cover rounded mb-2"></video>
+      <?php elseif ($memory['media_type'] === 'image'): ?>
+        <img src="<?php echo htmlspecialchars($memory['media_path']); ?>" class="w-40 h-40 object-cover rounded mb-2">
+      <?php endif; ?>
 
       <label class="block mb-1 font-medium mt-2">Replace Media (optional)</label>
       <input type="file" name="media" accept="image/*,video/*" class="w-full" id="mediaInput">
@@ -116,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_edit'])) {
         ⚡ Only very short videos are allowed — keep them under <strong>10MB</strong> 🌸
       </p>
 
-      <!-- ✅ Live preview -->
       <div id="previewContainer" class="mt-3 hidden">
         <p class="text-sm text-gray-600 mb-1">New media preview:</p>
         <div id="previewBox" class="w-40 h-40 rounded overflow-hidden shadow-md border"></div>
@@ -153,26 +149,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_edit'])) {
   </div>
 </div>
 
+<!-- ✅ Toast -->
+<div id="toast" class="fixed bottom-6 right-6 bg-pink-600 text-white px-4 py-2 rounded-xl shadow-lg hidden">
+  Memory updated! 🌸
+</div>
+
 <script>
 const form = document.getElementById('editForm');
 const mediaInput = document.getElementById('mediaInput');
 const previewContainer = document.getElementById('previewContainer');
 const previewBox = document.getElementById('previewBox');
-const currentMedia = document.getElementById('currentMedia');
 const modal = document.getElementById('uploadModal');
 const bar = document.getElementById('uploadProgress');
 const progressText = document.getElementById('progressText');
+const toast = document.getElementById('toast');
 
-// ✅ Preview and hide current media when selecting new one
+// ✅ Live preview
 mediaInput.addEventListener('change', () => {
   previewBox.innerHTML = '';
   const file = mediaInput.files[0];
   if (!file) {
     previewContainer.classList.add('hidden');
-    currentMedia.classList.remove('hidden');
     return;
   }
-  currentMedia.classList.add('hidden');
   const url = URL.createObjectURL(file);
   previewContainer.classList.remove('hidden');
   if (file.type.startsWith('video/')) {
@@ -189,7 +188,7 @@ mediaInput.addEventListener('change', () => {
   }
 });
 
-// ✅ AJAX upload with progress
+// ✅ AJAX upload with toast and redirect
 form.addEventListener('submit', e => {
   e.preventDefault();
   const file = mediaInput.files[0];
@@ -216,7 +215,10 @@ form.addEventListener('submit', e => {
     if (xhr.status === 200) {
       const res = JSON.parse(xhr.responseText);
       if (res.status === 'success') {
-        window.location.href = 'memories.php?msg=updated';
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+          window.location.href = res.redirect;
+        }, 2000);
       } else {
         alert(res.message || 'Update failed.');
       }
