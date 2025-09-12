@@ -24,7 +24,7 @@ if ($isAdmin) {
 
 // Carousel data
 $carousel = $conn->query("
-  SELECT m.id, m.title, m.image_path, u.display_name,
+  SELECT m.id, m.title, m.media_path, m.media_type, u.display_name,
          (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
   FROM memories m
   JOIN users u ON m.user_id = u.id
@@ -32,6 +32,7 @@ $carousel = $conn->query("
   ORDER BY m.created_at DESC
   LIMIT 10
 ");
+
 ?>
 
 <!-- 🌸 Parallax Flowers Background -->
@@ -112,8 +113,14 @@ $carousel = $conn->query("
         <div class="swiper-slide">
           <a href="memory.php?id=<?php echo $m['id']; ?>"
              class="block bg-white rounded-2xl shadow hover:shadow-2xl overflow-hidden">
-            <img src="<?php echo $m['image_path'] ?: 'default.jpg'; ?>"
-                 class="w-full h-56 object-cover">
+            <?php if ($m['media_type'] === 'video'): ?>
+              <video src="<?php echo $m['media_path']; ?>" 
+                    class="w-full h-56 object-cover" 
+                    autoplay muted loop playsinline></video>
+            <?php else: ?>
+              <img src="<?php echo $m['media_path'] ?: 'default.jpg'; ?>" 
+                  class="w-full h-56 object-cover">
+            <?php endif; ?>
             <div class="p-4 text-center">
               <h3 class="font-semibold text-pink-600 truncate"><?php echo htmlspecialchars($m['title']); ?></h3>
               <p class="text-xs text-gray-500 mb-1">by <?php echo htmlspecialchars($m['display_name']); ?></p>
@@ -245,3 +252,5 @@ setInterval(() => {
   setTimeout(() => s.remove(), 2000);
 }, 300);
 </script>
+
+<?php include 'includes/footer.php'; ?>

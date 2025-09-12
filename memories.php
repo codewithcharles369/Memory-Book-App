@@ -215,14 +215,28 @@ $result = $stmt->get_result();
 " >
 
 
-          <?php if ($row['image_path']): ?>
-            <img src="<?php echo $row['image_path']; ?>" 
-                 class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-          <?php else: ?>
-            <div class="w-full h-60 bg-pink-50 flex items-center justify-center text-pink-300 text-6xl">
-              <i class="fa-solid fa-flower"></i>
-            </div>
-          <?php endif; ?>
+<?php if ($row['media_type'] === 'video'): ?>
+  <video 
+    src="<?php echo htmlspecialchars($row['media_path']); ?>" 
+    autoplay 
+    muted 
+    loop 
+    playsinline
+    class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+  </video>
+
+<?php elseif ($row['media_type'] === 'image'): ?>
+  <img 
+    src="<?php echo htmlspecialchars($row['media_path']); ?>" 
+    class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+
+<?php else: ?>
+  <div class="w-full h-60 bg-pink-50 flex items-center justify-center text-pink-300 text-6xl">
+    <i class="fa-solid fa-flower"></i>
+  </div>
+<?php endif; ?>
+
+
 
           <!-- Overlay Info -->
           <div class="">

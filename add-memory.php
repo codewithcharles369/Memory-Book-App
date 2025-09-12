@@ -32,29 +32,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mkdir($uploadDir, 0777, true);
     }
 
-    $image_path = null;
-    if (!empty($_FILES['image']['name'])) {
-        $image_path = $uploadDir . time() . "_img_" . basename($_FILES['image']['name']);
-        move_uploaded_file($_FILES['image']['tmp_name'], $image_path);
+    $media_path = null;
+    $media_type = null;
+
+    if (!empty($_FILES['media']['name'])) {
+        $fileTmp  = $_FILES['media']['tmp_name'];
+        $fileName = basename($_FILES['media']['name']);
+        $fileSize = $_FILES['media']['size'];
+        $fileType = mime_content_type($fileTmp);
+
+        // Validate file type
+        if (substr($fileType, 0, 6) === 'image/') {
+            $media_type = 'image';
+        } elseif (substr($fileType, 0, 6) === 'video/') {
+            if ($fileSize > 10 * 1024 * 1024) { // 10MB
+                $err = "Video file must be less than 10MB.";
+            } else {
+                $media_type = 'video';
+            }
+        } else {
+            $err = "Only images or videos are allowed.";
+        }
+
+        if (empty($err)) {
+            $media_path = $uploadDir . time() . "_" . $fileName;
+            move_uploaded_file($fileTmp, $media_path);
+        }
+    } else {
+        $err = "Please upload an image or a video.";
     }
 
     // ✅ Admins create APPROVED memories instantly
     $status = ($role === 'admin') ? 'approved' : 'pending';
 
-    $stmt = $conn->prepare("INSERT INTO memories 
-        (user_id, title, description, image_path, tags, privacy, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("issssss", $user_id, $title, $description, $image_path, $tags, $privacy, $status);
+    if (empty($err)) {
+        $stmt = $conn->prepare("INSERT INTO memories 
+            (user_id, title, description, media_path, media_type, tags, privacy, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isssssss", $user_id, $title, $description, $media_path, $media_type, $tags, $privacy, $status);
 
-    if ($stmt->execute()) {
-        header("Location: memories.php?msg=added");
-        exit;
-    } else {
-        $err = "Something went wrong. Please try again 💔.";
+        if ($stmt->execute()) {
+            header("Location: memories.php?msg=added");
+            exit;
+        } else {
+            $err = "Something went wrong. Please try again 💔.";
+        }
     }
 }
 ?>
-
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>
@@ -75,8 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div>
-      <label class="block mb-1 font-medium">Image</label>
-      <input type="file" name="image" accept="image/*" class="w-full" required>
+      <label class="block mb-1 font-medium">Upload Image or Video</label>
+      <input type="file" name="media" accept="image/*,video/*" class="w-full" required>
+      <p class="text-xs text-gray-500 mt-1">Video must be less than 10MB</p>
     </div>
 
     <div>

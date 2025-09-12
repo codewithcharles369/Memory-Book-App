@@ -12,9 +12,9 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 $statusFilter = $_GET['status'] ?? 'all';
 
 $sql = "
-  SELECT m.id, m.title, m.created_at, m.privacy, m.image_path, m.status,
-         u.display_name,
-         (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
+  SELECT m.id, m.title, m.created_at, m.privacy, m.media_path, m.media_type, m.status,
+        u.display_name,
+        (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
   FROM memories m
   JOIN users u ON m.user_id = u.id
   WHERE 1
@@ -94,8 +94,15 @@ $result = $stmt->get_result();
           <?php while ($row = $result->fetch_assoc()): ?>
             <tr class="border-t hover:bg-pink-50">
               <td class="px-4 py-2">
-                <?php if ($row['image_path']): ?>
-                  <img src="<?php echo $row['image_path']; ?>" class="h-12 w-12 object-cover rounded-lg">
+                <?php if ($row['media_path']): ?>
+                  <?php if ($row['media_type'] === 'video'): ?>
+                    <video src="<?php echo $row['media_path']; ?>" 
+                          class="h-12 w-12 object-cover rounded-lg" 
+                          autoplay muted loop playsinline></video>
+                  <?php else: ?>
+                    <img src="<?php echo $row['media_path']; ?>" 
+                        class="h-12 w-12 object-cover rounded-lg">
+                  <?php endif; ?>
                 <?php else: ?>
                   <div class="h-12 w-12 bg-pink-50 flex items-center justify-center text-pink-300">🌸</div>
                 <?php endif; ?>

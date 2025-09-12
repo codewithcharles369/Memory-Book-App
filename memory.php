@@ -65,37 +65,50 @@ $memory = $result->fetch_assoc();
   <div class="absolute -top-3 -left-3 text-pink-200 text-5xl rotate-12">🌸</div>
   <div class="absolute bottom-2 right-2 text-pink-100 text-4xl animate-pulse">🌷</div>
 
-  <!-- Image with double-tap like -->
-  <div class="relative mb-6 group" id="memory-photo" data-id="<?php echo $memory['id']; ?>">
-      <?php if ($memory['image_path']): ?>
-          <img src="<?php echo $memory['image_path']; ?>" alt="Memory Image" 
-              class="w-full h-full object-cover rounded-lg shadow-md cursor-pointer select-none">
+<!-- Media with double-tap like -->
+<div class="relative mb-6 group" id="memory-photo" data-id="<?php echo $memory['id']; ?>">
 
-          <!-- tape sticker effect -->
-          <div class="absolute -top-3 left-1/3 bg-pink-200 w-24 h-6 rotate-6 rounded-sm opacity-70"></div>
+    <?php if (!empty($memory['media_path'])): ?>
+        <?php if ($memory['media_type'] === 'video'): ?>
+            <video controls class="w-full h-full object-cover rounded-lg shadow-md cursor-pointer select-none">
+                <source src="<?php echo htmlspecialchars($memory['media_path']); ?>" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        <?php else: ?>
+            <img src="<?php echo htmlspecialchars($memory['media_path']); ?>" alt="Memory Image" 
+                class="w-full h-full object-cover rounded-lg shadow-md cursor-pointer select-none">
+        <?php endif; ?>
 
-          <!-- Top-right action buttons -->
-          <div class="absolute top-3 right-3 flex space-x-2">
-              <!-- Download button -->
-              <a href="<?php echo $memory['image_path']; ?>" 
-                download="memory_<?php echo $memory['id']; ?>.jpg"
+        <!-- tape sticker effect -->
+        <div class="absolute -top-3 left-1/3 bg-pink-200 w-24 h-6 rotate-6 rounded-sm opacity-70"></div>
+
+        <!-- Top-right action buttons -->
+        <div class="absolute top-3 right-3 flex space-x-2">
+            <!-- Download button -->
+            <a href="<?php echo htmlspecialchars($memory['media_path']); ?>" 
+                download="memory_<?php echo $memory['id']; ?>.<?php echo ($memory['media_type'] === 'video' ? 'mp4' : 'jpg'); ?>"
                 class="bg-white/80 hover:bg-white text-pink-600 px-3 py-2 rounded-full shadow-md transition flex items-center space-x-1"
-                title="Download Image">
-                <i class="fa-solid fa-download"></i> <span class="hidden sm:inline text-sm">Download</span>
-              </a>
+                title="Download <?php echo ucfirst($memory['media_type']); ?>">
+                <i class="fa-solid fa-download"></i> 
+                <span class="hidden sm:inline text-sm">Download</span>
+            </a>
 
-              <button id="share-btn"
-                      class="bg-white/80 hover:bg-white text-pink-600 px-3 py-2 rounded-full shadow-md transition flex items-center space-x-1"
-                      title="Share Memory"
-                      data-url="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . '/memory.php?id=' . $memory['id']; ?>"
-                      data-title="<?php echo htmlspecialchars($memory['title']); ?>">
-                <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline text-sm">Share</span>
-              </button>
+            <!-- Share button -->
+            <button id="share-btn"
+                    class="bg-white/80 hover:bg-white text-pink-600 px-3 py-2 rounded-full shadow-md transition flex items-center space-x-1"
+                    title="Share Memory"
+                    data-url="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . '/memory.php?id=' . $memory['id']; ?>"
+                    data-title="<?php echo htmlspecialchars($memory['title']); ?>">
+                <i class="fa-solid fa-share-nodes"></i> 
+                <span class="hidden sm:inline text-sm">Share</span>
+            </button>
+        </div>
 
-          </div>
-      <?php else: ?>
-          <div class="w-full h-96 bg-pink-50 flex items-center justify-center text-pink-300 text-7xl rounded-lg">🌷</div>
-      <?php endif; ?>
+    <?php else: ?>
+        <div class="w-full h-96 bg-pink-50 flex items-center justify-center text-pink-300 text-7xl rounded-lg">🌷</div>
+    <?php endif; ?>
+
+
 
       <!-- Big fading heart -->
       <div id="big-heart" 
@@ -290,8 +303,8 @@ if (!empty($tags)) {
     }
 
     $sql = "
-        SELECT m.id, m.title, m.image_path, u.display_name, 
-               (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
+        SELECT m.id, m.title, m.media_path, m.media_type, u.display_name, 
+       (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
         FROM memories m
         JOIN users u ON m.user_id = u.id
         WHERE m.privacy = 'public' AND  m.status = 'approved' 
@@ -308,8 +321,8 @@ if (!empty($tags)) {
 } else {
     // Fallback: just random public memories
     $relatedStmt = $conn->prepare("
-        SELECT m.id, m.title, m.image_path, u.display_name,
-               (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
+        SELECT m.id, m.title, m.media_path, m.media_type, u.display_name, 
+       (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
         FROM memories m
         JOIN users u ON m.user_id = u.id
         WHERE m.privacy = 'public' AND m.id != ? AND  m.status = 'approved'
@@ -333,13 +346,16 @@ $related = $relatedStmt->get_result();
            class="block bg-white shadow-lg rounded-xl overflow-hidden transform hover:scale-105 transition duration-300"
            data-aos="fade-up">
           
-          <?php if ($rel['image_path']): ?>
-            <img src="<?php echo $rel['image_path']; ?>" 
-                 alt="Memory Image" 
-                 class="w-full h-48 object-cover">
-          <?php else: ?>
-            <div class="w-full h-48 bg-pink-50 flex items-center justify-center text-pink-300 text-5xl">🌷</div>
-          <?php endif; ?>
+        <?php if ($rel['media_type'] === 'video'): ?>
+          <video src="<?php echo htmlspecialchars($rel['media_path']); ?>"
+                class="w-full h-48 object-cover" muted autoplay loop playsinline></video>
+        <?php elseif ($rel['media_type'] === 'image'): ?>
+          <img src="<?php echo htmlspecialchars($rel['media_path']); ?>" 
+              alt="Memory Image" 
+              class="w-full h-48 object-cover">
+        <?php else: ?>
+          <div class="w-full h-48 bg-pink-50 flex items-center justify-center text-pink-300 text-5xl">🌷</div>
+        <?php endif; ?>
 
           <div class="p-4 text-center">
             <p class="font-cursive text-lg text-gray-700">
