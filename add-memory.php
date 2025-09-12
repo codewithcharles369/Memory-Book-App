@@ -135,18 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_upload'])) {
   </div>
 </div>
 
-<!-- ✅ Success Toast -->
-<div id="successToast" class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg hidden z-50">
-  Memory added successfully 🎉
-</div>
-
 <script>
 const form = document.getElementById('memoryForm');
 const mediaInput = document.getElementById('mediaInput');
 const modal = document.getElementById('uploadModal');
 const bar = document.getElementById('uploadProgress');
 const progressText = document.getElementById('progressText');
-const toast = document.getElementById('successToast');
 
 form.addEventListener('submit', e => {
   e.preventDefault();
@@ -176,12 +170,7 @@ form.addEventListener('submit', e => {
     if (xhr.status === 200) {
       const res = JSON.parse(xhr.responseText);
       if (res.status === 'success') {
-        toast.classList.remove('hidden');
-        toast.classList.add('animate-fade-in');
-        setTimeout(() => {
-          toast.classList.add('hidden');
-          window.location.href = 'memories.php?msg=added';
-        }, 1500);
+        window.location.href = 'memories.php?msg=added';
       } else {
         alert(res.message || 'Upload failed.');
       }
@@ -195,15 +184,5 @@ form.addEventListener('submit', e => {
   xhr.send(formData);
 });
 </script>
-
-<style>
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-</style>
 
 <?php include 'includes/footer.php'; ?>
