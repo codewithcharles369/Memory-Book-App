@@ -5,10 +5,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Database configuration
-$host = "localhost";      // Usually 'localhost' on most hosting
-$user = "root";           // Your MySQL username
-$pass = "";               // Your MySQL password
-$db   = "memory_book";    // Our database name
+$host = "db.pxxl.pro:4666";      // Usually 'localhost' on most hosting
+$user = "user_78bab0bd";           // Your MySQL username
+$pass = "713c7b223c050044aa40104ff204ee60";               // Your MySQL password
+$db   = "db_70c49042";    // Our database name
 
 // Create connection
 $conn = new mysqli($host, $user, $pass, $db);
