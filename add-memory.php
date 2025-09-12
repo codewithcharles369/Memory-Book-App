@@ -10,15 +10,14 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Get current user role
+// Get user role
 $role = 'user';
 $roleStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
 $roleStmt->bind_param("i", $user_id);
 $roleStmt->execute();
 $roleResult = $roleStmt->get_result();
 if ($roleResult && $roleResult->num_rows > 0) {
-    $roleRow = $roleResult->fetch_assoc();
-    $role = $roleRow['role'];
+    $role = $roleResult->fetch_assoc()['role'];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -28,9 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $privacy     = $_POST['privacy'];
 
     $uploadDir = "uploads/";
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
-    }
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
     $media_path = null;
     $media_type = null;
@@ -39,13 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileTmp  = $_FILES['media']['tmp_name'];
         $fileName = basename($_FILES['media']['name']);
         $fileSize = $_FILES['media']['size'];
-        $fileType = mime_content_type($fileTmp);
+        $fileType = mime_content_type($fileTmp) ?: $_FILES['media']['type'];
 
-        // Validate file type
-        if (substr($fileType, 0, 6) === 'image/') {
+        if (str_starts_with($fileType, 'image/')) {
             $media_type = 'image';
-        } elseif (substr($fileType, 0, 6) === 'video/') {
-            if ($fileSize > 10 * 1024 * 1024) { // 10MB
+        } elseif (str_starts_with($fileType, 'video/')) {
+            if ($fileSize > 10 * 1024 * 1024) {
                 $err = "Video file must be less than 10MB.";
             } else {
                 $media_type = 'video';
@@ -55,14 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($err)) {
-            $media_path = $uploadDir . time() . "_" . $fileName;
-            move_uploaded_file($fileTmp, $media_path);
+            $media_path = $uploadDir . time() . "_" . preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
+            if (!move_uploaded_file($fileTmp, $media_path)) {
+                $err = "Upload failed. Please try again.";
+            }
         }
     } else {
         $err = "Please upload an image or a video.";
     }
 
-    // ✅ Admins create APPROVED memories instantly
     $status = ($role === 'admin') ? 'approved' : 'pending';
 
     if (empty($err)) {
@@ -80,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>
