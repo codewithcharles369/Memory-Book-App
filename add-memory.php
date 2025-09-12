@@ -19,7 +19,8 @@ if ($roleResult && $roleResult->num_rows > 0) {
     $role = $roleResult->fetch_assoc()['role'];
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_upload'])) {
+    // Handle AJAX upload request
     $title       = trim($_POST['title']);
     $description = trim($_POST['description']);
     $tags        = trim($_POST['tags']);
@@ -44,52 +45,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $media_type = 'image';
         } elseif (strpos($fileType, 'video/') === 0) {
             if ($fileSize > 10 * 1024 * 1024) {
-                $err = "Video file must be less than 10MB.";
+                echo json_encode(['status' => 'error', 'message' => 'Video file must be less than 10MB.']);
+                exit;
             } else {
                 $media_type = 'video';
             }
         } else {
-            $err = "Only images or videos are allowed.";
+            echo json_encode(['status' => 'error', 'message' => 'Only images or videos are allowed.']);
+            exit;
         }
 
-        if (empty($err)) {
-            $safeName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
-            $media_path = $uploadDir . time() . "_" . $safeName;
+        $safeName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
+        $media_path = $uploadDir . time() . "_" . $safeName;
 
-            if (!move_uploaded_file($fileTmp, $media_path)) {
-                $err = "Upload failed. Please try again.";
-            }
+        if (!move_uploaded_file($fileTmp, $media_path)) {
+            echo json_encode(['status' => 'error', 'message' => 'Upload failed. Please try again.']);
+            exit;
         }
     } else {
-        $err = "Please upload an image or a video.";
+        echo json_encode(['status' => 'error', 'message' => 'Please upload an image or a video.']);
+        exit;
     }
 
     $status = ($role === 'admin') ? 'approved' : 'pending';
 
-    if (empty($err)) {
-        $stmt = $conn->prepare("INSERT INTO memories 
-            (user_id, title, description, media_path, media_type, tags, privacy, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssssss", $user_id, $title, $description, $media_path, $media_type, $tags, $privacy, $status);
+    $stmt = $conn->prepare("INSERT INTO memories 
+        (user_id, title, description, media_path, media_type, tags, privacy, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("isssssss", $user_id, $title, $description, $media_path, $media_type, $tags, $privacy, $status);
 
-        if ($stmt->execute()) {
-            header("Location: memories.php?msg=added");
-            exit;
-        } else {
-            $err = "Something went wrong. Please try again 💔.";
-        }
+    if ($stmt->execute()) {
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Something went wrong. Please try again 💔.']);
     }
+    exit;
 }
 ?>
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>
 
-  <?php if (!empty($err)): ?>
-    <p class="bg-red-100 text-red-600 p-2 rounded mb-4"><?php echo htmlspecialchars($err); ?></p>
-  <?php endif; ?>
-
-  <form method="POST" enctype="multipart/form-data" class="space-y-4" id="memoryForm">
+  <form id="memoryForm" enctype="multipart/form-data" class="space-y-4">
     <div>
       <label class="block mb-1 font-medium">Title</label>
       <input type="text" name="title" class="w-full border rounded-lg p-2" required>
@@ -103,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div>
       <label class="block mb-1 font-medium">Upload Image or Video</label>
       <input type="file" name="media" accept="image/*,video/*" class="w-full" id="mediaInput" required>
-      <p class="text-xs text-gray-500 mt-1 text-pink-600">
+      <p class="text-xs text-pink-600 mt-1">
         ⚡ Only very short videos are allowed — keep them under <strong>10MB</strong> so your friends can enjoy them quickly 🌸
       </p>
     </div>
@@ -127,29 +124,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </form>
 </div>
 
-<!-- ✅ Loading modal -->
-<div id="loadingModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-  <div class="bg-white rounded-xl p-6 text-center shadow-lg">
-    <div class="animate-spin h-10 w-10 border-4 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-    <p class="text-pink-600 font-medium">Uploading your memory... 🌸</p>
+<!-- ✅ Upload Progress Modal -->
+<div id="uploadModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-xl p-6 text-center shadow-lg w-80">
+    <div class="mb-3 text-pink-600 font-medium">Uploading your memory... 🌸</div>
+    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+      <div id="uploadProgress" class="bg-pink-500 h-3 w-0 transition-all"></div>
+    </div>
+    <div id="progressText" class="text-sm mt-2 text-gray-600">0%</div>
   </div>
 </div>
 
 <script>
 const form = document.getElementById('memoryForm');
 const mediaInput = document.getElementById('mediaInput');
-const loadingModal = document.getElementById('loadingModal');
+const modal = document.getElementById('uploadModal');
+const bar = document.getElementById('uploadProgress');
+const progressText = document.getElementById('progressText');
 
 form.addEventListener('submit', e => {
+  e.preventDefault();
+
   const file = mediaInput.files[0];
-  if (file && file.type.startsWith('video/') && file.size > 10 * 1024 * 1024) {
-    e.preventDefault();
-    alert('⚠️ Video is too large! Please keep it under 10MB.');
-    return;
+  if (!file) return alert("Please select an image or a video.");
+  if (file.type.startsWith('video/') && file.size > 10 * 1024 * 1024) {
+    return alert('⚠️ Video is too large! Please keep it under 10MB.');
   }
-  // Show loading modal
-  loadingModal.classList.remove('hidden');
-  loadingModal.classList.add('flex');
+
+  const formData = new FormData(form);
+  formData.append('ajax_upload', '1');
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '', true);
+
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      bar.style.width = percent + '%';
+      progressText.textContent = percent + '%';
+    }
+  });
+
+  xhr.onload = () => {
+    modal.classList.add('hidden');
+    if (xhr.status === 200) {
+      const res = JSON.parse(xhr.responseText);
+      if (res.status === 'success') {
+        window.location.href = 'memories.php?msg=added';
+      } else {
+        alert(res.message || 'Upload failed.');
+      }
+    } else {
+      alert('Server error. Try again.');
+    }
+  };
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  xhr.send(formData);
 });
 </script>
 
