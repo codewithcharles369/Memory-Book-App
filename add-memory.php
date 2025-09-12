@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strpos($fileType, 'image/') === 0) {
             $media_type = 'image';
         } elseif (strpos($fileType, 'video/') === 0) {
-            if ($fileSize > 10 * 1024 * 1024) {
+            if ($fileSize > 100 * 1024 * 1024) {
                 $err = "Video file must be less than 10MB.";
             } else {
                 $media_type = 'video';
