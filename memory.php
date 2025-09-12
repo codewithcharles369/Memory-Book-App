@@ -294,7 +294,7 @@ if (!empty($tags)) {
                (SELECT COUNT(*) FROM likes WHERE memory_id = m.id) AS like_count
         FROM memories m
         JOIN users u ON m.user_id = u.id
-        WHERE m.privacy = 'public'  AND  m.status = 'approved' 
+        WHERE m.privacy = 'public' AND  m.status = 'approved' 
           AND m.id != ? 
           AND (" . implode(" OR ", $likeClauses) . ")
         ORDER BY RAND()
