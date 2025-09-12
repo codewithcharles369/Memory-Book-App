@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Get user role
+// ✅ Get user role
 $role = 'user';
 $roleStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
 $roleStmt->bind_param("i", $user_id);
@@ -18,6 +18,14 @@ $roleStmt->execute();
 $roleResult = $roleStmt->get_result();
 if ($roleResult && $roleResult->num_rows > 0) {
     $role = $roleResult->fetch_assoc()['role'];
+}
+
+// ✅ Debug helper (only logs for admins)
+function debugLog($msg) {
+    global $role;
+    if ($role === 'admin') {
+        file_put_contents("upload_errors.log", date("Y-m-d H:i:s") . " - " . $msg . "\n", FILE_APPEND);
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -36,28 +44,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileTmp  = $_FILES['media']['tmp_name'];
         $fileName = basename($_FILES['media']['name']);
         $fileSize = $_FILES['media']['size'];
-        $fileType = mime_content_type($fileTmp) ?: $_FILES['media']['type'];
+        $fileType = mime_content_type($fileTmp) ?: ($_FILES['media']['type'] ?? 'unknown');
+
+        debugLog("File: $fileName | Size: $fileSize | Type: $fileType");
 
         if (str_starts_with($fileType, 'image/')) {
             $media_type = 'image';
         } elseif (str_starts_with($fileType, 'video/')) {
             if ($fileSize > 10 * 1024 * 1024) {
                 $err = "Video file must be less than 10MB.";
+                debugLog("Error: Video too large");
             } else {
                 $media_type = 'video';
             }
         } else {
             $err = "Only images or videos are allowed.";
+            debugLog("Error: Invalid type $fileType");
         }
 
         if (empty($err)) {
-            $media_path = $uploadDir . time() . "_" . preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
+            $safeName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $fileName);
+            $media_path = $uploadDir . time() . "_" . $safeName;
+
             if (!move_uploaded_file($fileTmp, $media_path)) {
                 $err = "Upload failed. Please try again.";
+                debugLog("Error: move_uploaded_file failed.");
             }
         }
     } else {
         $err = "Please upload an image or a video.";
+        debugLog("Error: No file uploaded.");
     }
 
     $status = ($role === 'admin') ? 'approved' : 'pending';
@@ -69,21 +85,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("isssssss", $user_id, $title, $description, $media_path, $media_type, $tags, $privacy, $status);
 
         if ($stmt->execute()) {
+            debugLog("Success: Memory inserted into DB");
             header("Location: memories.php?msg=added");
             exit;
         } else {
             $err = "Something went wrong. Please try again 💔.";
+            debugLog("DB Error: " . $stmt->error);
         }
     }
 }
 ?>
-
 
 <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">
   <h1 class="text-3xl font-cursive text-pink-600 mb-6">Add a Memory 🌸</h1>
 
   <?php if (!empty($err)): ?>
     <p class="bg-red-100 text-red-600 p-2 rounded mb-4"><?php echo $err; ?></p>
+  <?php endif; ?>
+
+  <?php if ($role === 'admin' && file_exists('upload_errors.log')): ?>
+    <div class="bg-gray-50 p-2 rounded border text-xs text-gray-600 mb-4 max-h-40 overflow-y-auto">
+      <strong>Debug Log:</strong><br>
+      <?php echo nl2br(htmlspecialchars(file_get_contents('upload_errors.log'))); ?>
+    </div>
   <?php endif; ?>
 
   <form method="POST" enctype="multipart/form-data" class="space-y-4">
